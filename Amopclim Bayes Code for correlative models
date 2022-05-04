@@ -1,0 +1,59 @@
+Bayesian Code for Correlative models (example given for full model for southern site)
+
+sink("OccupancyModel.txt")
+      cat("model{
+        #########################
+        ## Define the likelihood
+        #########################
+          ##loop through all of the data (N)
+            for(j in 1:N){
+              ########################################################
+              ## State process (i.e., the true occupancy of the site)
+              ########################################################
+                  ###missing data for first year of well data and some Novi dates###
+                  SOWell[j] ~ dnorm(mu.well,tau.well)
+                  NoviD[j] ~ dnorm(mu.novi,tau.novi)
+  
+                  z[j] ~ dbern(psi[j])
+                  
+                  #env. modeling
+                  logit(psi[j]) <- b0 +bnovi*NoviD[j] +bwell*SOWell[j] +bwell2*SOWell[j]^2 +bice*IceZ[j] +bdo*DO[j] +bdzero*Dunder0C[j] +bcoldd*DMinTbZero[j] +bopen*Open[j] +bsnow*TotSnow[j] +bsnow2*TotSnow[j]^2 +bint1*b.ice[j]*Open[j]
+
+              #######################
+              ## Observation process
+              ####################### +
+                ##loop through the repeat surveys (T)
+                  for(k in 1:T){
+                    y[j,k] ~ dbern(mu[j,k])
+                    mu[j,k] <- z[j] * p[j,k]
+                    logit(p[j,k]) <- a0 +a.dip*Dip[j,k]
+
+        ######################
+        ## Define the priors
+        ######################
+          ######occupancy########
+           a0~dnorm(0,0.001)
+           a.dip ~ dnorm(0, 0.001)
+
+          ######factors##########
+          b0~dnorm(0,0.001)
+          bdo ~ dnorm(0, 0.001)
+          bopen ~ dnorm(0, 0.001)
+          bnovi ~ dnorm(0, 0.001)
+          bice ~ dnorm(0, 0.001)
+          bdzero ~ dnorm(0, 0.001)
+          bwell ~ dnorm(0, 0.001)
+          bwell2 ~ dnorm(0, 0.001)
+          bcoldd ~ dnorm(0, 0.001)
+          bsnow ~ dnorm(0, 0.001)
+          bsnow2 ~ dnorm(0, 0.001)
+          bint1 ~ dnorm(0, 0.001)
+          
+          ######Missing data##############
+          #mu.well ~ dnorm(0, 0.001)
+          #tau.well ~ dgamma(0.001, 0.001)
+          #mu.novi ~ dnorm(0, 0.001)
+          #tau.novi ~ dgamma(0.001, 0.001)
+
+      }", fill = T) ##close the model and the cat statement
+    sink() ##close the sink function
