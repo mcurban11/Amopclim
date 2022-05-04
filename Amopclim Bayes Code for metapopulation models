@@ -1,0 +1,78 @@
+Bayesian Code for Mechanistic Metapopulation models 
+
+sink("MechMetapop.txt")
+  cat("model{
+            ##loop through the sites
+              for(j in 1:n.sites){
+                ###########################
+                ##Ecological process model
+                ###########################
+                  ##occupancy state in the first year
+                  ###missing data for first year of well data###3
+                  SOWellm[j,1] ~ dnorm(mu.well,tau.well)
+                  
+	     #initial distribution to begin occupancy based on initial starting distribution  	
+                  disp.occ[j, 1] <- (sum(disp.prob[,j] * start.dist))
+                  
+                  z[j,1] ~ dbern(psi[j,1])
+                  psi[j,1] <- start.dist[j] * phi[j,1] + (1-start.dist[j]) * gamma[j,1] 
+                        
+ ##model environmental effects on survival from year to year
+ logit(phi[j,1]) <- b.phi.0 + b.phi.ice*flakeicem[j,1] +b.phi.flood*SOWellm[j,1]			  		
+                   ##model environmental effects on colonization from year to year
+logit(gamma[j,1]) <- b.gam.0 + b.phi.ice*flakeicem[j,1] +b.phi.flood*SOWellm[j,1] +b.gam.disp*disp.occ[j,1]
+
+                  ##occupancy state in all other years 2+
+                  ##using a loop through all years
+                  ##phi is the survival rate
+                  ##gamma is the colonization rate
+                    for(t in 2:n.years){
+                    SOWellm[j,t] ~ dnorm(mu.well,tau.well)
+                   
+                  ##calculate potential for local colonization from dispersal prob matrix
+                  disp.occ[j, t] <- (sum(disp.prob[,j] * z[,t-1]))
+                    
+                  z[j,t] ~ dbern(psi[j,t])
+                  psi[j,t] <- z[j, t-1] * phi[j,t] + (1-z[j, t-1]) * gamma[j,t] 
+                        
+                  ##model environmental effects on survival from year to year
+                  logit(phi[j,t]) <- b.phi.0 + b.phi.ice*flakeicem[j,t] +b.phi.flood*SOWellm[j,t] 
+                        
+                  ##model environmental effects on colonization from year to year
+logit(gamma[j,t])<-b.gam.0 + b.phi.ice*flakeicem[j,t] +b.phi.flood*SOWellm[j,t] + b.gam.disp*disp.occ[j,t]
+                    }##close loop through years
+
+                ####################
+                ##Observation model
+                ####################
+                  ##loop through the replicate surveys
+                    for(k in 1:n.reps){
+                      ##loop through the years
+                        for(t in 1:n.years){
+                          y[j,k,t] ~ dbern(mu[j,k,t])
+                          mu[j,k,t] <- z[j,t] * p[j,k,t]
+                          logit(p[j,k,t]) <- b.p.0 + a.area*area[j,k,t]
+                        }##close loop through years
+                    }##close loop through reps
+              }##close loop through sites
+        
+      #####################
+      ##Define the priors
+      #####################
+        b.p.0 ~ dnorm(0, 0.001)
+        a.area ~ dnorm (0,0.001)
+        
+        b.phi.0 ~ dnorm(0, 0.001)
+        b.phi.ice ~ dnorm(0, 0.001)
+        b.phi.flood ~ dnorm(0, 0.001)
+        
+        b.gam.0 ~ dnorm(0, 0.001) 
+        b.gam.ice ~ dnorm(0, 0.001)
+        b.gam.flood ~ dnorm(0, 0.001)
+        b.gam.disp ~ dnorm(0, 0.001) 
+        
+        mu.well ~ dnorm(0, 0.001)
+        tau.well ~ dgamma(0.001, 0.001)
+
+  }", fill = T)
+  sink()
